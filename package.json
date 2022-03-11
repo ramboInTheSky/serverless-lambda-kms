@@ -1,0 +1,32 @@
+{
+  "name": "idam-api",
+  "version": "1.0.0",
+  "description": "This repository contains all the configuration files to deploy the IDP API onto AWS Lambda and expose them via AWS API Gateway",
+  "dependencies": {
+    "email-validator": "^2.0.4",
+    "jquery": "^3.4.0",
+    "requestretry": "^4.0.0",
+    "serverless": "^1.42.3",
+    "serverless-aws-documentation": "^1.1.0",
+    "serverless-domain-manager": "3.2.1",
+    "serverless-offline": "4.9.4",
+    "serverless-offline-sns": "^0.53.0",
+    "serverless-offline-sqs": "^2.0.0",
+    "sinon": "^7.3.2",
+    "spectacle-docs": "^1.0.7",
+    "what-input": "^5.2.1",
+    "winston": "^3.2.1"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "jshint": "^2.10.2",
+    "mocha": "^6.1.4",
+    "mock-lambda-context": "^0.0.1",
+    "mocked-env": "^1.2.4",
+    "mitm": "^1.7.0",
+    "https": "^1.0.0"
+  },
+  "scripts": {
+    "test": "mocha --ui bdd test/*_tests.js"
+  }
+}

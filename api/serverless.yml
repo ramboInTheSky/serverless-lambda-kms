@@ -1,0 +1,368 @@
+service: api
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  endpointType: REGIONAL
+  stage: dev
+  region: ${opt:region}
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "sqs:SendMessage"
+        - "sqs:ReceiveMessage"
+      Resource: "arn:aws:sqs:${self:provider.region}:${self:custom.stage.awsAccount}:idam-sls-changelog-${self:custom.stage.stageName}-sqs"
+    - Effect: "Allow"
+      Action:
+        - "sqs:ListQueues"
+      Resource: "arn:aws:sqs:${self:provider.region}:${self:custom.stage.awsAccount}:*"
+    - Effect: "Allow"
+      Action:
+        - "sns:Publish"
+      Resource: "arn:aws:sns:${self:provider.region}:${self:custom.stage.awsAccount}:idam-sls-changelog-${self:provider.region}-sns"
+
+package:
+  individually: true
+  excludeDevDependencies: false
+  exclude:
+  - functions/**
+  - stage_variables/**
+
+plugins:
+  - serverless-offline
+  - serverless-offline-sns
+  - serverless-offline-sqs
+  - serverless-domain-manager
+  - serverless-aws-documentation
+
+custom:
+  stage: ${file(stage_variables/${opt:stage, self:provider.stage}.yaml)}
+  customDomain: ${file(variables/${self:custom.stage.subscription}.yaml)}
+  serverless-offline-sns:
+    host: 0.0.0.0
+    port: 4002
+    debug: false
+  serverless-offline-sqs:
+    apiVersion: '2012-11-05'
+    endpoint: http://0.0.0.0:9324
+    region: ${self:provider.region}
+    accessKeyId: root
+    secretAccessKey: root
+    skipCacheInvalidation: false
+
+  documentation:
+    api:
+      info:
+        version: "0.1"
+        title: "Service API"
+        description: "API Definitions for the Service API"
+        termsOfService: "https://www.idam.co.uk/help/our-policies"
+        contact:
+          name: "IT Apps"
+          url: "https://www.idam.co.uk/"
+          email: "itapps@idam.co.uk"
+        license:
+          name: "Licensing"
+          url: "https://www.idam.co.uk/help/our-policies"
+      resources:
+      - path: "some/path"
+        description: "This is the description for some/path"
+    models:
+
+      - name: ErrorResponse
+        description: "Server error response"
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            error:
+              type: "string"
+              description: "The error message"
+            error_description:
+              type: "string"
+              description: "The error message description"
+
+      - name: UserWebhookRequest
+        description: "A webhook request that contains the UUID of the user, the security control, a timestamp and metadata like the event type and the OIDC client"
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            uuid:
+              type: string
+              description: "The UUID of the user in Janrain"
+            entity_type:
+              type: string
+              description: "The type of the event, eg 'user'"
+            datetime:
+              type: string
+              description: "The timestamp of the event"
+            hash:
+              type: string
+              description: "A pre-shared key between Janrain and Nando's ID that acts as a security control. Nando's ID will reject unregistered keys"
+            client_id:
+              type: string
+              description: "The id of the Janrain OAuth client that the user interacted with in order to create or update the profile"
+
+      - name: UserCallbackResponse
+        description: "A callback response that acknowledges the receipt of a webhook event"
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              description: "An 'ok' response that confirms that the webhook event was received successfully"
+
+      - name: UserOptIn
+        description: "The user's marketing preferences"
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              description: "The marketing preferences that can be updated at a later time (ie after clicking on an unsubscribe email link)"
+
+      - name: UserAddress
+        description: "The user's address details"
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            postal_code:
+              type: string
+              description: "The user's post code"
+            country:
+              type: string
+              description: "The user's country of residence"
+
+      - name: UserUpdateProfileRequest
+        description: "A request to update the allowed user's profile attributes (ie 'paytronix id', 'opt in')"
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            paytronix_iam_id:
+              type: string
+              description: "The Paytronix UUID that can be added to the profile at a later time (ie after initial registration or not present during lazy migration)"
+            optIn:
+              $ref: "{{model: UserOptIn}}"
+
+      - name: ChangelogRequest
+        description: "A changelog request that contains the UUID of the user and a timestamp"
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            uuid:
+              type: string
+              description: "The UUID of the user in Janrain"
+            datetime:
+              type: string
+              description: "The timestamp of the event"
+
+      - name: ChangelogResponse
+        description: "A changelog response that contains the Nando's ID user profile"
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            hash:
+              type: string
+              description: "A webhook hash key that acts as a security control for the topic subscribers"
+            sub:
+              type: string
+              description: "The UUID of the user"
+            family_name:
+              type: string
+              description: "The user's first name"
+            given_name:
+              type: string
+              description: "The user's last name"
+            birthdate:
+              type: string
+              description: "The user's date of birth"
+            email:
+              type: string
+              description: "The user's email"
+            email_verified:
+              type: string
+              description: "The flag that specifies whether the user's email is verified"
+            address:
+              $ref: "{{model: UserAddress}}"
+            mobileNumber:
+              type: string
+              description: "The user's mobile number"
+            optIn:
+              type: string
+              description: "The flag that specifies whether the user has opted in for marketing updates"
+            termsAndConditions:
+              type: string
+              description: "The flag that specifies whether the user has accepted the terms and condiotions of the service"
+            idp_iam_id:
+              type: string
+              description: "The flag that specifies whether the user has accepted the terms and condiotions of the service"
+            paytronix_iam_id:
+              type: string
+              description: "The flag that specifies whether the user has accepted the terms and condiotions of the service"
+            updated_at:
+              type: string
+              description: "The timestamp of last user update operation"
+
+
+functions:
+  authorizerApiKey:
+    handler: functions/function_authorise_api_key/handler_authorise_api_key.authorise_apikey
+    package:
+      include:
+        - functions/function_authorise_api_key/**/*
+    environment:
+      IDAM_ID_API_KEY: ${self:custom.stage.idam.api.key}
+
+  authorizerApiExtKey:
+    handler: functions/function_authorise_api_key/handler_authorise_api_key.authorise_apikey
+    package:
+      include:
+        - functions/function_authorise_api_key/**/*
+    environment:
+      IDAM_ID_API_KEY: ${self:custom.stage.idam.api.ext_key}
+
+  callback_user_create:
+    handler: functions/function_callback_user_create/handler_callback_user_create.callback_user_create
+    package:
+      include:
+      - functions/function_callback_user_create/**/*
+    environment:
+      API_HOST: ${self:custom.stage.idam.api.host}
+      API_PORT: ${self:custom.stage.idam.api.port}
+      CALLBACK_HASH: ${self:custom.stage.idam.janrain.callback.user_create_hash}
+      CHANGELOG_QUEUE_URL: ${self:custom.stage.idam.queues.changelog.url}
+      CHANGELOG_DLQ_QUEUE_URL: ${self:custom.stage.idam.queues.changelog_dlq.url}
+      IS_OFFLINE: ${self:custom.stage.idam.api.isOffline}
+    events:
+    - http:
+        path: v1/callback/user/create
+        method: post
+        integration: lambda
+        cors: true
+        documentation:
+          summary: "Receives a webhook on user creation"
+          description: "This is used to receive user profile creation events from Janrain and is protected by a pre-shared hash key"
+          requestModels:
+            "application/json": "UserWebhookRequest"
+          methodResponses:
+          - statusCode: '200'
+            responseModels:
+              "application/json": "UserCallbackResponse"
+          - statusCode: '403'
+            responseModels:
+              "application/json": "ErrorResponse"
+          - statusCode: '500'
+            responseModels:
+              "application/json": "ErrorResponse"
+
+
+
+  changelog:
+    handler: functions/function_changelog/handler_changelog.changelog
+    package:
+      include:
+      - functions/function_changelog/**/*
+    environment:
+      POLICYGATE_HOST: ${self:custom.stage.idam.policygate.host}
+      POLICYGATE_TOKEN_ENDPOINT: ${self:custom.stage.idam.policygate.token_endpoint}
+      POLICYGATE_SERVICE_CLIENT_ID: ${self:custom.stage.idam.policygate.service_client_id}
+      POLICYGATE_SERVICE_CLIENT_SECRET: ${self:custom.stage.idam.policygate.service_client_secret}
+      PROFILECONNECT_HOST: ${self:custom.stage.idam.profileconnect.host}
+      PROFILECONNECT_PROFILE_ENDPOINT: ${self:custom.stage.idam.profileconnect.profile_endpoint}
+      CHANGELOG_QUEUE_URL: ${self:custom.stage.idam.queues.changelog.url}
+      CHANGELOG_TOPIC: ${self:custom.stage.idam.notifications.changelog_topic}
+      CHANGELOG_SUBSCRIPTION_ENDPOINT: ${self:custom.stage.idam.subscriptions.changelog.endpoint}
+      CHANGELOG_WEBHOOK_HASH: ${self:custom.stage.idam.changelog.webhook_hash}
+      ENABLE_CHANGELOG: ${self:custom.stage.idam.changelog.enabled}
+      IS_OFFLINE: ${self:custom.stage.idam.api.isOffline}
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - Changelog
+              - Arn
+          documentation:
+          summary: "Sends a changelog event to a topic"
+          description: "This function receives a creation/update event from a queue, retrieves the full user profile from Janrain, creates a changelog payload and publishes it to a topic (notification service)"
+          requestModels:
+            "application/json": "UserUpdateProfileRequest"
+            methodResponses:
+              - statusCode: '200'
+                responseModels:
+                  "application/json": "UserCallbackResponse"
+              - statusCode: '403'
+                responseModels:
+                  "application/json": "ErrorResponse"
+
+  update_profile:
+    handler: functions/function_update_profile/handler_update_profile.update_profile
+    package:
+      include:
+      - functions/function_update_profile/**/*
+    environment:
+      PROFILECONNECT_HOST: ${self:custom.stage.idam.profileconnect.host}
+      PROFILECONNECT_PROFILE_ENDPOINT: ${self:custom.stage.idam.profileconnect.profile_endpoint}
+      ATTRIBUTES_WHITELIST: ${self:custom.stage.idam.profileconnect.profile_attributes_whitelist}
+    events:
+    - http:
+        path: v1/profile/{uuid}
+        method: patch
+        integration: lambda
+        cors: true
+        documentation:
+          summary: "Processes an update request to the user's profile"
+          description: "This is used to update whitelisted attributes of the user's and is protected by the user's bearer token"
+          requestModels:
+            "application/json": "UserUpdateProfileRequest"
+          methodResponses:
+          - statusCode: '200'
+            responseModels:
+              "application/json": "UserCallbackResponse"
+          - statusCode: '403'
+            responseModels:
+              "application/json": "ErrorResponse"
+          - statusCode: '500'
+            responseModels:
+              "application/json": "ErrorResponse"
+
+  healthz:
+    handler: functions/function_healthz/handler_healthz.healthz
+    package:
+      include:
+        - functions/function_healthz/**/*
+    environment:
+      API_HOST: ${self:custom.stage.idam.api.host}
+      API_PORT: ${self:custom.stage.idam.api.port}
+    events:
+      - http:
+          path: healthz
+          method: get
+          integration: lambda
+          cors: true
+          documentation:
+            summary: "A health check endpoint for the Nando's ID API"
+            description: "This is used to monitor the availability of the Nando's ID API within a region"
+            methodResponses:
+              - statusCode: '200'
+
+resources:
+  Resources:
+    Changelog:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: idam-sls-changelog-${self:custom.stage.stageName}-sqs
+    ChangelogDlq:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: idam-sls-changelog-dlq-${self:custom.stage.stageName}-sqs
+    ChangelogTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: idam-sls-changelog-${self:custom.stage.stageName}-sns

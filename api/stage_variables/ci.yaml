@@ -1,0 +1,33 @@
+stageName: ci
+certName: ci
+stageFullName: continuous-integration
+subscription: preprod
+awsAccount: 12345
+
+idam:
+  api:
+    host: auth-api.ci.idamid.idam.co.uk
+    port: 443
+    key: ${ssm:/idamid/ci/apikey~true}
+    ext_key: ${ssm:/idamid/ci/apikey_ext~true}
+  janrain:
+    capture_host: 'idam-dev.eu-dev.janraincapture.com'
+    owner_client_id: ${ssm:/janrain/ci/client_id~true}
+    owner_client_secret: ${ssm:/janrain/ci/client_secret~true}
+    profile_client_id: ${ssm:/account/ci/client_id~true}
+    callback:
+      user_create_hash: ${ssm:/janrain/ci/callback_user_create_hash~true}
+      user_update_hash: ${ssm:/janrain/ci/callback_user_update_hash~true}
+  notifications:
+    validation_topic: idam-sls-validation-ci-sns
+    slack_alert_topic: idam-sls-slack_alert-ci-sns
+    changelog_topic: 'arn:aws:sns:eu-west-2:12345:idam-sls-changelog-ci-sns'
+  queues:
+    changelog:
+      arn: 'arn:aws:sqs:eu-west-2:12345:idam-sls-changelog-ci-sqs'
+      url: 'https://sqs.eu-west-2.amazonaws.com/12345/idam-sls-changelog-ci-sqs'
+    changelog_dlq:
+      url: 'https://sqs.eu-west-2.amazonaws.com/12345/idam-sls-changelog-dlq-ci-sqs'
+  changelog:
+    webhook_hash: ${ssm:/changelog/ci/webhook_hash~true}
+    enabled: true

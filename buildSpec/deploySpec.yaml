@@ -1,0 +1,31 @@
+version: 0.2
+env:
+  parameter-store:
+    AWS_ACCESS_KEY_ID:      "/serverless/glbl/aws_key"
+    AWS_SECRET_ACCESS_KEY:  "/serverless/glbl/aws_secret"
+phases:
+  install:
+    commands:
+    - npm install
+  pre_build:
+    commands:
+    - ENV_NAME=${ENVIRONMENT_NAME:=ci}
+  build:
+    commands:
+    - echo Deploying API ...
+    - cd idam-api
+    - serverless create_domain --stage $ENV_NAME --region $AWS_REGION -v
+    - |
+      for function in functions/function_*/ ; do
+          cd $function
+          echo -n "Checking for package.json in $function ... "
+          if [ -f package.json ]; then
+            echo "found"
+            echo "Running npm install in $function"
+            npm install --no-audit --force --verbose
+          else
+            echo "not found"
+          fi
+          cd ../..
+      done
+    - serverless deploy --stage $ENV_NAME --region $AWS_REGION -v

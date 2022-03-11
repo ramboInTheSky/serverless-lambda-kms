@@ -1,0 +1,31 @@
+version: 0.2
+phases:
+  pre_build:
+    commands:
+      - ENV_NAME=${ENVIRONMENT_NAME:=ci}
+      - PIPELINE_NAME=idam-tf-${PIPELINE:=api}-${ENV_NAME}
+      - ACCOUNT_ID=$(aws sts get-caller-identity --output text | awk '{print $1}')
+      - BUCKET_NAME=codebuild-${ACCOUNT_ID}-buildinfo-glbl
+  build:
+    commands:
+      - |
+        if aws s3 ls | grep ${BUCKET_NAME}; then
+          echo "Bucket exists"
+        else
+          echo "Missing s3 bucket ${BUCKET_NAME}, create with global terraform pipeline"
+          exit 1
+        fi
+      - |
+        if aws s3 ls ${BUCKET_NAME}/${PIPELINE_NAME}/ | grep build_info.txt; then
+          echo "build_info.txt exists"
+        else
+          echo "Creating build_info.txt"
+          echo "BUILD_NUMBER=0" > build_info.txt
+          aws s3 cp ./build_info.txt s3://${BUCKET_NAME}/${PIPELINE_NAME}/build_info.txt
+        fi
+      - aws s3 cp s3://${BUCKET_NAME}/${PIPELINE_NAME}/build_info.txt ./build_info.txt
+      - BUILD_NO=$(grep 'BUILD_NUMBER=[0-9]' build_info.txt | grep '[0-9]*')
+      - export $BUILD_NO
+      - BUILD_NUMBER=$((BUILD_NUMBER+1))
+      - sed -i -E "s/BUILD_NUMBER=[0-9]+/BUILD_NUMBER=$BUILD_NUMBER/g" build_info.txt
+      - aws s3 cp ./build_info.txt s3://${BUCKET_NAME}/${PIPELINE_NAME}/build_info.txt

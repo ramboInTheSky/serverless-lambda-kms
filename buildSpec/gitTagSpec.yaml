@@ -1,0 +1,40 @@
+version: 0.2
+env:
+  variables:
+    GIT_ORG:        "Amido"
+    GIT_REPO:       "idam-api-functions"
+  parameter-store:
+    GIT_USER: "/codebuild/glbl/github_user"
+    GIT_PASS: "/codebuild/glbl/github_token"
+phases:
+  pre_build:
+    commands:
+      - ENV_NAME=${ENVIRONMENT_NAME:=ci}
+      - PIPELINE_NAME=idam-tf-${PIPELINE:=api}-${ENV_NAME}
+      - ACCOUNT_ID=$(aws sts get-caller-identity --output text | awk '{print $1}')
+      - BUCKET_NAME=codebuild-${ACCOUNT_ID}-buildinfo-glbl
+      - echo "machine github.com" >> ~/.netrc
+      - echo "login ${GIT_USER}" >> ~/.netrc
+      - echo "password ${GIT_PASS}" >> ~/.netrc
+  build:
+    commands:
+      # Clone the repo at the correct SHA with git compatibility
+      - git clone https://github.com/${GIT_ORG}/${GIT_REPO}.git
+      - cd $GIT_REPO; git checkout ${CODEBUILD_RESOLVED_SOURCE_VERSION}
+      # Read the current pipeline number
+      - aws s3 cp s3://${BUCKET_NAME}/${PIPELINE_NAME}/build_info.txt ./build_info.txt
+      - BUILD_NO=$(grep 'BUILD_NUMBER=[0-9]' build_info.txt | grep '[0-9]*')
+      - export $BUILD_NO
+      # Check for existing environment branch
+      - |
+        if [ `git branch --remote --list origin/${ENV_NAME}_stage` ]; then
+          git checkout -b ${ENV_NAME}_${BUILD_NUMBER}
+          git checkout ${ENV_NAME}_stage
+          git merge ${ENV_NAME}_${BUILD_NUMBER}
+          git tag ${ENV_NAME}_${BUILD_NUMBER}
+          git push --force origin ${ENV_NAME}_stage
+        else
+          git checkout -b ${ENV_NAME}_stage
+          git tag ${ENV_NAME}_${BUILD_NUMBER}
+          git push --set-upstream origin ${ENV_NAME}_stage
+        fi

@@ -1,0 +1,17 @@
+version: 0.2
+phases:
+  pre_build:
+    commands:
+    - ENV_NAME=${ENVIRONMENT_NAME:=ci}
+    - BUCKET_NAME=idam-${ENV_NAME}-report-s3-bucket
+  build:
+    commands:
+    - echo Querying API ...
+    - GATEWAY_ID=$(aws apigateway get-rest-apis --query 'items[?name==`'${ENV_NAME}'-idam-api`]' | jq '.[].id' | tr -d '"')
+    - aws apigateway get-export --export-type swagger --rest-api-id ${GATEWAY_ID} --stage-name ${ENV_NAME} ${ENV_NAME}-idam-api.swagger.json
+    - spectacle -1 ${ENV_NAME}-idam-api.swagger.json
+  post_build:
+    commands:
+    - echo Deploy to S3 ...
+    - mv public swagger
+    - aws s3 cp swagger s3://${BUCKET_NAME}/swagger --recursive

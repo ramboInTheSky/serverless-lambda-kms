@@ -1,0 +1,42 @@
+stageName: local
+certName: local
+stageFullName: local
+subscription: preprod
+awsAccount: 123456
+
+idam:
+  api:
+    host: localhost
+    port: 3000
+    key: 'TEST_KEY'
+    ext_key: 'TEST_EXT_KEY'
+    isOffline: true
+    getIdpProfileOauthEndpoint: '/v1/idp/oauth/get_user_profile'
+    getIdpProfileB2bEndpoint: '/v1/idp/b2b/get_user_profile'
+    getPaytronixProfileOauthEndpoint: '/v1/paytronix/oauth/get_user_profile'
+    getPaytronixProfileB2bEndpoint: '/v1/paytronix/b2b/get_user_profile'
+  janrain:
+    capture_host: 'idam-dev.eu-dev.janraincapture.com'
+    owner_client_id: ${ssm:/janrain/ci/client_id~true}
+    owner_client_secret: ${ssm:/janrain/ci/client_secret~true}
+    profile_client_id: ${ssm:/account/ci/client_id~true}
+    callback:
+      user_create_hash: 'CREATE_CALLBACK_HASH'
+      user_update_hash: 'UPDATE_CALLBACK_HASH'
+  notifications:
+    validation_topic: idam-sls-validation-local-sns
+    slack_alert_topic: idam-sls-slack_alert-local-sns
+    changelog_topic: idam-sls-changelog-local-sns
+  queues:
+    changelog:
+      arn: 'arn:aws:sqs:eu-west-2:XXXXX:idam-sls-changelog-local-sqs'
+      url: 'http://localhost:9324/queue/idam-sls-changelog-local-sqs'
+    changelog_dlq:
+      arn: 'arn:aws:sqs:region:XXXXXX:idam-sls-changelog-local-sqs'
+      url: 'http://localhost:9324/queue/idam-sls-changelog-local-sqs'
+  subscriptions:
+    changelog:
+      endpoint: 'http://localhost:10001/v1/idam-id-callback'
+  changelog:
+    webhook_hash: 'CHANGELOG_HASH'
+    enabled: true

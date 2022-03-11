@@ -1,0 +1,8 @@
+{
+  "name": "function_authorise_api_key",
+  "version": "1.0.0",
+  "description": "This function validates api key within the request is valid",
+  "dependencies": {
+    "winston": "^3.1.0"
+  }
+}

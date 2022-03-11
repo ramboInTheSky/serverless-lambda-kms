@@ -1,0 +1,12 @@
+version: 0.2
+phases:
+  install:
+    commands:
+    - npm install --no-audit --force --verbose
+  build:
+    commands:
+    - npm test
+artifacts:
+  files:
+  - build/**/*
+  - buildSpec/*

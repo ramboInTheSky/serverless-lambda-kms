@@ -1,0 +1,8 @@
+{
+  "name": "function_callback_user_create",
+  "version": "1.0.0",
+  "description": "This function is triggered by a Janrainwebhook on user creation",
+  "dependencies": {
+    "winston": "^3.1.0"
+  }
+}

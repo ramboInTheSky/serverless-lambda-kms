@@ -1,0 +1,6 @@
+domainName: auth-api.${self:custom.stage.stageName}.idamid.idam.co.uk
+basePath: ''
+endpointType: REGIONAL
+certificateName: "*.auth-api.${self:custom.stage.certName}.idam.idam.co.uk"
+stage: ${self:custom.stage.stageName}
+createRoute53Record: true
